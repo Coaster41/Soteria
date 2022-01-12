@@ -3,40 +3,58 @@ import mapbox
 import random
 from mapbox import Directions
 
-help(mapbox.Directions)
 
-class Information:
-    def __init__(self, response, origin, destination):
+# help(mapbox.Directions)
+
+class Directions:
+    def __init__(self, waypoints):
+        service = Directions()
+        total = []
+        for i in range(len(waypoints)):
+            point = {
+                'type': 'Feature',
+                'properties': {'name': 'Portland, OR'},
+                'geometry': {
+                    'type': 'Point',
+                    'coordinates': waypoints[i]}}
+            total.append(point)
+        response = service.directions(total, 'mapbox/walking').geojson()
+
         self.response = response
-        self.A = origin
-        self.B = destination
-        self.distance = 0
-        self.duration = 0
-        self.coordinates = []
+        self.waypoints = waypoints
+        self.distance = self.response['features'][0]['properties']['distance']
+        self.coordinates = self.response['features'][0]['geometry']['coordinates'].copy()
+        self.duration = self.response['features'][0]['properties']['duration']
+
+    def get_waypoints(self):
+        return self.waypoints
+
+    def get_response(self):
+        return self.response
 
     def get_coordinates(self):
-        if self.response is not None:
-            for i in self.response["features"]:
-                self.coordinates = i["geometry"]["coordinates"]
-        return self.coordinates
+        # if self.response is not None:
+        #     for i in self.response["features"]:
+        #         self.coordinates = i["geometry"]["coordinates"]
+        return self.response['features'][0]['geometry']['coordinates']
 
     def get_distance(self):
-        if self.response is not None:
-            for i in self.response["features"]:
-                self.distance = i["properties"]["distance"]
+        # if self.response is not None:
+        #     for i in self.response["features"]:
+        #         self.distance = i["properties"]["distance"]
         return self.distance
 
     def get_duration(self):
-        if self.response is not None:
-            for i in self.response["features"]:
-                self.duration = i["properties"]["duration"]
+        # if self.response is not None:
+        #     for i in self.response["features"]:
+        #         self.duration = i["properties"]["duration"]
         return self.duration
 
     def get_origin(self):
-        return self.A
+        return self.waypoints[0]
 
     def get_destination(self):
-        return self.B
+        return self.waypoints[len(self.waypoints) - 1]
 
 
 def map_test():
@@ -69,7 +87,7 @@ def check_intersection(directions, avoidCoordinates, radius):
     # Determines whether the avoid location is RADIUS units from the path
     # Directions class contains the current directions that are being tested
     # avoidCoordinates are the coordinates of the point we are avoiding
-    ERROR_BUFFER = 3.7/111139 # intersections have a buffer of 3.7 meters
+    ERROR_BUFFER = 3.7 / 111139  # intersections have a buffer of 3.7 meters
     waypoints = directions.getWaypoints()
     coordinates = directions.getCoordinates()
     for i in range(len(waypoints) - 1):
@@ -77,8 +95,8 @@ def check_intersection(directions, avoidCoordinates, radius):
         for j in range(i):
             tempWaypoints.append(waypoints[j])
         tempWaypoints.append(avoidCoordinates)
-        tempDirections = getDirections(tempWaypoints)
-        tempCoordinates = tempDirections.getCoordinates()
+        tempDirections = Directions(tempWaypoints)
+        tempCoordinates = tempDirections.get_coordinates()
         iter = 0
         while iter < len(coordinates) and iter < len(tempCoordinates):
             if abs(coordinates[iter][0] - tempCoordinates[iter][0]) < ERROR_BUFFER and \
@@ -97,21 +115,6 @@ def check_intersection(directions, avoidCoordinates, radius):
             return False
     return True
 
-def totalDirections(coordinateList):
-    # total directions
-    service = Directions()
-    total = []
-    for i in range(len(coordinateList)):
-        point = {
-            'type': 'Feature',
-            'properties': {'name': 'Portland, OR'},
-            'geometry': {
-                'type': 'Point',
-                'coordinates': coordinateList[i]}}
-        total.append(point)
-    response = service.directions(total, 'mapbox/walking').geojson()
-    return response
-
 
 def distanceCoordinates(coordinate0, coordinate1):
     # returns the distance between two coordinates in meters
@@ -120,19 +123,24 @@ def distanceCoordinates(coordinate0, coordinate1):
 
 
 def getRandomPoint(coordinate0, coordinate1):
+    # returns a random point within a circle centered in between coordinates
+    EXCESS_SPACE = 1.1  # artificial radius increase (product)
     midPoint = []
-    midPoint[0] = (coordinate0[0]+coordinate1[0]) / 2
+    midPoint[0] = (coordinate0[0] + coordinate1[0]) / 2
     midPoint[1] = (coordinate0[1] + coordinate1[1]) / 2
-    radius = math.sqrt(midPoint ** 2 + coordinate1 ** 2)
-    theta = random.random()*2*math.pi
+    radius = EXCESS_SPACE * math.sqrt(midPoint ** 2 + coordinate1 ** 2)
+    theta = random.random() * 2 * math.pi
     randomCoordinate = []
     randomCoordinate[0] = midPoint[0] + math.cos(theta) * radius
     randomCoordinate[1] = midPoint[1] + math.sin(theta) * radius
     return randomCoordinate
 
 
+def generateAlternateDirections(origin, destination, iterations):
+    generatedDirections = []
+    for i in range(iterations):
+        generatedDirections.append(Directions([origin, getRandomPoint(origin, destination), destination]))
+    return generatedDirections
+
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    print(map_test())  # ['features'][0]['geometry']['coordinates']
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
