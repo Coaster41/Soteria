@@ -1,5 +1,6 @@
 import math
 import mapbox
+import random
 from mapbox import Directions
 
 help(mapbox.Directions)
@@ -62,9 +63,20 @@ def check_intersection(directions, avoidCoordinates, radius):
 
 
 def distanceCoordinates(coordinate0, coordinate1):
+    # returns the distance between two coordinates in meters
     coordinateDistance = math.sqrt(coordinate0 ** 2 + coordinate1 ** 2)
     return coordinateDistance * 111139
 
+def getRandomPoint(coordinate0, coordinate1):
+    midPoint = []
+    midPoint[0] = (coordinate0[0]+coordinate1[0]) / 2
+    midPoint[1] = (coordinate0[1] + coordinate1[1]) / 2
+    radius = math.sqrt(midPoint ** 2 + coordinate1 ** 2)
+    theta = random.random()*2*math.pi
+    randomCoordinate = []
+    randomCoordinate[0] = midPoint[0] + math.cos(theta) * radius
+    randomCoordinate[1] = midPoint[1] + math.sin(theta) * radius
+    return randomCoordinate
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
