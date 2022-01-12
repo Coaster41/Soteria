@@ -5,6 +5,39 @@ from mapbox import Directions
 
 help(mapbox.Directions)
 
+class Information:
+    def __init__(self, response, origin, destination):
+        self.response = response
+        self.A = origin
+        self.B = destination
+        self.distance = 0
+        self.duration = 0
+        self.coordinates = []
+
+    def get_coordinates(self):
+        if self.response is not None:
+            for i in self.response["features"]:
+                self.coordinates = i["geometry"]["coordinates"]
+        return self.coordinates
+
+    def get_distance(self):
+        if self.response is not None:
+            for i in self.response["features"]:
+                self.distance = i["properties"]["distance"]
+        return self.distance
+
+    def get_duration(self):
+        if self.response is not None:
+            for i in self.response["features"]:
+                self.duration = i["properties"]["duration"]
+        return self.duration
+
+    def get_origin(self):
+        return self.A
+
+    def get_destination(self):
+        return self.B
+
 
 def map_test():
     service = Directions()
@@ -63,6 +96,21 @@ def check_intersection(directions, avoidCoordinates, radius):
         else:
             return False
     return True
+
+def totalDirections(coordinateList):
+    # total directions
+    service = Directions()
+    total = []
+    for i in range(len(coordinateList)):
+        point = {
+            'type': 'Feature',
+            'properties': {'name': 'Portland, OR'},
+            'geometry': {
+                'type': 'Point',
+                'coordinates': coordinateList[i]}}
+        total.append(point)
+    response = service.directions(total, 'mapbox/walking').geojson()
+    return response
 
 
 def distanceCoordinates(coordinate0, coordinate1):
