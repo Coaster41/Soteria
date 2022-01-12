@@ -26,7 +26,9 @@ def map_test():
         'geometry': {
             'type': 'Point',
             'coordinates': [-122, 45]}}
-    response = service.directions([origin, destination1, destination], 'mapbox/walking', alternatives=True, continue_straight=True, geometries='geojson', language='en', overview='simplified', steps=False).geojson()
+    response = service.directions([origin, destination1, destination], 'mapbox/walking', alternatives=True,
+                                  continue_straight=True, geometries='geojson', language='en', overview='simplified',
+                                  steps=False).geojson()
     return response
 
 
@@ -34,6 +36,7 @@ def check_intersection(directions, avoidCoordinates, radius):
     # Determines whether the avoid location is RADIUS units from the path
     # Directions class contains the current directions that are being tested
     # avoidCoordinates are the coordinates of the point we are avoiding
+    ERROR_BUFFER = 3.7/111139 # intersections have a buffer of 3.7 meters
     waypoints = directions.getWaypoints()
     coordinates = directions.getCoordinates()
     for i in range(len(waypoints) - 1):
@@ -45,8 +48,8 @@ def check_intersection(directions, avoidCoordinates, radius):
         tempCoordinates = tempDirections.getCoordinates()
         iter = 0
         while iter < len(coordinates) and iter < len(tempCoordinates):
-            if coordinates[iter][0] == tempCoordinates[iter][0] and coordinates[iter][1] == tempCoordinates[iter][1]:
-                # compares whether coordinates are the same at ITER coordinate might need to change and give linency with less than abs
+            if abs(coordinates[iter][0] - tempCoordinates[iter][0]) < ERROR_BUFFER and \
+                    abs(coordinates[iter][1] - tempCoordinates[iter][1]) < ERROR_BUFFER:
                 iter += 1
             else:
                 # coordinates don't match iter is divergent point
@@ -67,6 +70,7 @@ def distanceCoordinates(coordinate0, coordinate1):
     coordinateDistance = math.sqrt(coordinate0 ** 2 + coordinate1 ** 2)
     return coordinateDistance * 111139
 
+
 def getRandomPoint(coordinate0, coordinate1):
     midPoint = []
     midPoint[0] = (coordinate0[0]+coordinate1[0]) / 2
@@ -77,6 +81,7 @@ def getRandomPoint(coordinate0, coordinate1):
     randomCoordinate[0] = midPoint[0] + math.cos(theta) * radius
     randomCoordinate[1] = midPoint[1] + math.sin(theta) * radius
     return randomCoordinate
+
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
