@@ -1,12 +1,13 @@
 import math
 import mapbox
 import random
+import time
 from mapbox import Directions
 
 
 # help(mapbox.Directions)
 
-class Directions:
+class MapDirections:
     def __init__(self, waypoints):
         service = Directions()
         total = []
@@ -55,6 +56,9 @@ class Directions:
 
     def get_destination(self):
         return self.waypoints[len(self.waypoints) - 1]
+
+    def __print__(self):
+        print(self.waypoints)
 
 
 def map_test():
@@ -118,7 +122,7 @@ def check_intersection(directions, avoidCoordinates, radius):
 
 def distanceCoordinates(coordinate0, coordinate1):
     # returns the distance between two coordinates in meters
-    coordinateDistance = math.sqrt(coordinate0 ** 2 + coordinate1 ** 2)
+    coordinateDistance = math.sqrt(coordinate0[0] - coordinate1[0] ** 2 + (coordinate1[1] - coordinate0[1]) ** 2)
     return coordinateDistance * 111139
 
 
@@ -126,21 +130,42 @@ def getRandomPoint(coordinate0, coordinate1):
     # returns a random point within a circle centered in between coordinates
     EXCESS_SPACE = 1.1  # artificial radius increase (product)
     midPoint = []
-    midPoint[0] = (coordinate0[0] + coordinate1[0]) / 2
-    midPoint[1] = (coordinate0[1] + coordinate1[1]) / 2
-    radius = EXCESS_SPACE * math.sqrt(midPoint ** 2 + coordinate1 ** 2)
+    midPoint.append((coordinate0[0] + coordinate1[0]) / 2)
+    midPoint.append((coordinate0[1] + coordinate1[1]) / 2)
+    # print("midpoint", midPoint)
+    # print("coordinate1", coordinate1)
+    radius = EXCESS_SPACE * math.sqrt((midPoint[0] - coordinate1[0]) ** 2 + ((midPoint[1] - coordinate1[1]) ** 2))
+    # print("radius", radius)
     theta = random.random() * 2 * math.pi
     randomCoordinate = []
-    randomCoordinate[0] = midPoint[0] + math.cos(theta) * radius
-    randomCoordinate[1] = midPoint[1] + math.sin(theta) * radius
+    randomCoordinate.append(midPoint[0] + math.cos(theta) * radius)
+    randomCoordinate.append(midPoint[1] + math.sin(theta) * radius)
     return randomCoordinate
 
 
-def generateAlternateDirections(origin, destination, iterations):
-    generatedDirections = []
-    for i in range(iterations):
-        generatedDirections.append(Directions([origin, getRandomPoint(origin, destination), destination]))
+def generateAlternateDirections(origin, destination, iterations, depth):
+    generatedDirections = [MapDirections([origin, destination])]
+    for i in range(iterations-1):
+        # generatedDirections.append(MapDirections([origin, getRandomPoint(origin, destination), destination]))
+        start = origin
+        waypoints = [start]
+        for n in range(depth):
+            randomPoint = getRandomPoint(start, destination)
+            waypoints.append(randomPoint)
+            tempWaypoints = waypoints.copy()
+            tempWaypoints.append(destination)
+            generatedDirections.append(MapDirections(tempWaypoints))
+            start = randomPoint
     return generatedDirections
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
+    # origin = [-122.04441141616797, 36.96841340396887]
+    # destination = [-122.01927448088864, 36.97390676208401]
+    # randomizedPosition = getRandomPoint(origin, destination)
+    # print(randomizedPosition[0], randomizedPosition[1])
+    # print(MapDirections([origin, randomizedPosition, destination]).get_waypoints())
+    DirectionsList = generateAlternateDirections([-122.04441141616797, 36.96841340396887], [-122.01927448088864, 36.97390676208401], 20, 3)
+    for direction in DirectionsList:
+        print(direction.get_waypoints())
+
