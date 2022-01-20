@@ -3,6 +3,9 @@ import mapbox
 import random
 import time
 from mapbox import Directions
+import requests
+import json
+
 
 
 # help(mapbox.Directions)
@@ -14,7 +17,6 @@ class MapDirections:
         for i in range(len(waypoints)):
             point = {
                 'type': 'Feature',
-                'properties': {'name': 'Portland, OR'},
                 'geometry': {
                     'type': 'Point',
                     'coordinates': waypoints[i]}}
@@ -65,19 +67,16 @@ def map_test():
     service = Directions()
     origin = {
         'type': 'Feature',
-        'properties': {'name': 'Portland, OR'},
         'geometry': {
             'type': 'Point',
             'coordinates': [-122.7282, 45.5801]}}
     destination = {
         'type': 'Feature',
-        'properties': {'name': 'Bend, OR'},
         'geometry': {
             'type': 'Point',
             'coordinates': [-121.3153, 44.0582]}}
     destination1 = {
         'type': 'Feature',
-        'properties': {'name': 'Bend, OR'},
         'geometry': {
             'type': 'Point',
             'coordinates': [-122, 45]}}
@@ -158,14 +157,68 @@ def generateAlternateDirections(origin, destination, iterations, depth):
             start = randomPoint
     return generatedDirections
 
+def getStreetAddress(coordinates, GMAPS_ACCESS_TOKEN):
+    url = 'https://maps.googleapis.com/maps/api/geocode/json?latlng=' + str(coordinates[1]) + ',' + str(coordinates[0]) + '&result_type=route&key='+GMAPS_ACCESS_TOKEN
+    r = requests.get(url)
+    # print(r.json())
+    r = r.json()
+    # print(r['results'])
+    return r['results'][0]['address_components'][1]['long_name']
+
+
+
+def generateStreetAddressesSet(Directions, MAPBOX_ACCESS_TOKEN, GMAPS_ACCESS_TOKEN):
+    url = 'https://api.mapbox.com/directions/v5/mapbox/walking/'
+    coordinates = Directions.get_waypoints()
+    counter = 0
+    for cords in coordinates:
+        lat = cords[1]
+        long = cords[0]
+        url += str(long) + ',' + str(lat)
+        if counter != len(coordinates) - 1:
+            url += ';'
+        counter += 1
+    url += '?access_token=' + MAPBOX_ACCESS_TOKEN + '&steps=true'
+    addressDict = {}
+    # print(url)
+    r = requests.get(url)
+    # print(r.json())
+    r = r.json()
+    for i in r['routes'][0]['legs'][0]['steps']:
+        if i['duration'] != 0:
+            name = ''
+            if i['name'] == '':
+                name = getStreetAddress([i['intersections'][0]['location'][0],i['intersections'][0]['location'][1]], GMAPS_ACCESS_TOKEN)
+                # addressDict[getStreetAddress([i['intersections'][0]['location'][0],i['intersections'][0]['location'][1]], GMAPS_ACCESS_TOKEN)] = i['duration']
+            else:
+                name = i['name']
+            if name in addressDict:
+                addressDict[name] += i['duration']
+            else:
+                addressDict[name] = i['duration']
+    return addressDict
+
+
+
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
+    GMAPS_ACCESS_TOKEN = 'AIzaSyBuSmERVe37l4lhnLVAv1lAqF3prPFoeLg'
+    ACCESS_TOKEN = 'pk.eyJ1IjoiY29hc3RlcjQxIiwiYSI6ImNreHpsNmw4ejdteTIydW9jdTM1eWtzbXYifQ.Osaih74nYJNxDEOiz9FK6A'
+    # d = MapDirections([[36.98365515596037,-122.00899387223498],[36.97421013125925, -122.0098521790967]])
+    d = MapDirections([[-122.04441141616797, 36.96841340396887], [-122.01927448088864, 36.97390676208401]])
+    print(generateStreetAddressesSet(d, ACCESS_TOKEN, GMAPS_ACCESS_TOKEN))
+    # r = requests.get('https://api.mapbox.com/directions/v5/mapbox/walking/-122.00899387223498,36.98365515596037;-122.0098521790967,36.97421013125925;-122.0011521790967,36.96821013125925?access_token=pk.eyJ1IjoiY29hc3RlcjQxIiwiYSI6ImNreHpsNmw4ejdteTIydW9jdTM1eWtzbXYifQ.Osaih74nYJNxDEOiz9FK6A&steps=true')
+    # # print(r.text)
+    # r = r.json()
+    # for i in r['routes'][0]['legs'][0]['steps']:
+    #     print(i['name'])
+    # print(r['routes'][0]['legs'][0]['steps'])
     # origin = [-122.04441141616797, 36.96841340396887]
     # destination = [-122.01927448088864, 36.97390676208401]
     # randomizedPosition = getRandomPoint(origin, destination)
     # print(randomizedPosition[0], randomizedPosition[1])
     # print(MapDirections([origin, randomizedPosition, destination]).get_waypoints())
-    DirectionsList = generateAlternateDirections([-122.04441141616797, 36.96841340396887], [-122.01927448088864, 36.97390676208401], 20, 3)
-    for direction in DirectionsList:
-        print(direction.get_waypoints())
-
+    # DirectionsList = generateAlternateDirections([-122.04441141616797, 36.96841340396887], [-122.01927448088864, 36.97390676208401], 20, 3)
+    # for direction in DirectionsList:
+    #     print(direction.get_waypoints())
+    # print(map_test())
