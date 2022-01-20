@@ -202,7 +202,7 @@ def generateStreetAddressesSet(Directions, MAPBOX_ACCESS_TOKEN, GMAPS_ACCESS_TOK
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    GMAPS_ACCESS_TOKEN = 'AIzaSyBuSmERVe37l4lhnLVAv1lAqF3prPFoeLg'
+    GMAPS_ACCESS_TOKEN = 'ASK_COEN_FOR_THIS'
     ACCESS_TOKEN = 'pk.eyJ1IjoiY29hc3RlcjQxIiwiYSI6ImNreHpsNmw4ejdteTIydW9jdTM1eWtzbXYifQ.Osaih74nYJNxDEOiz9FK6A'
     # d = MapDirections([[36.98365515596037,-122.00899387223498],[36.97421013125925, -122.0098521790967]])
     d = MapDirections([[-122.04441141616797, 36.96841340396887], [-122.01927448088864, 36.97390676208401]])
