@@ -5,7 +5,9 @@ import time
 from mapbox import Directions
 import requests
 import json
-
+import polyline
+import sys
+import numpy as np
 
 
 # help(mapbox.Directions)
@@ -24,10 +26,12 @@ class MapDirections:
         response = service.directions(total, 'mapbox/walking').geojson()
 
         self.response = response
+        print(response)
         self.waypoints = waypoints
         self.distance = self.response['features'][0]['properties']['distance']
         self.coordinates = self.response['features'][0]['geometry']['coordinates'].copy()
         self.duration = self.response['features'][0]['properties']['duration']
+        # self.geometry = self.response['features'][0]
 
     def get_waypoints(self):
         return self.waypoints
@@ -121,8 +125,15 @@ def check_intersection(directions, avoidCoordinates, radius):
 
 def distanceCoordinates(coordinate0, coordinate1):
     # returns the distance between two coordinates in meters
-    coordinateDistance = math.sqrt(coordinate0[0] - coordinate1[0] ** 2 + (coordinate1[1] - coordinate0[1]) ** 2)
-    return coordinateDistance * 111139
+    latMid = (coordinate0[0] + coordinate1[0]) / 2.0;
+
+    m_per_deg_lat = 111132.954 - 559.822 * math.cos(2.0 * latMid) + 1.175 * math.cos(4.0 * latMid);
+    m_per_deg_lon = (3.14159265359 / 180) * 6367449 * math.cos(latMid);
+
+    deltaLat = abs(coordinate0[0] - coordinate1[0]);
+    deltaLon = abs(coordinate0[1] - coordinate1[1]);
+
+    return math.sqrt(pow(deltaLat * m_per_deg_lat, 2) + pow(deltaLon * m_per_deg_lon, 2));
 
 
 def getRandomPoint(coordinate0, coordinate1):
@@ -198,15 +209,41 @@ def generateStreetAddressesSet(Directions, MAPBOX_ACCESS_TOKEN, GMAPS_ACCESS_TOK
                 addressDict[name] = i['duration']
     return addressDict
 
+def flipCoordinates(coordinates):
+    newCoordinates = []
+    for i in coordinates:
+        newCoordinates.append((i[1],i[0]))
+    return newCoordinates
+
+
+def detectOffCourse(location, mapDirections, error):
+    coordinates = flipCoordinates(mapDirections.get_coordinates())
+    minDistance = 999999
+    for i in range(0, len(coordinates)-1):
+        x1, y1 = coordinates[i]
+        x2, y2 = coordinates[i+1]
+        x3, y3 = location
+        dx, dy = x2 - x1, y2 - y1
+        det = dx * dx + dy * dy
+        a = (dy * (y3 - y1) + dx * (x3 - x1)) / det
+        distance = distanceCoordinates(location, (x1 + a * dx, y1 + a * dy))
+        if distance < minDistance:
+            minDistance = distance
+    print(minDistance)
+    return error >= abs(minDistance)
+
 
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    GMAPS_ACCESS_TOKEN = 'ASK_COEN_FOR_THIS'
+    print('hi')
+    # GMAPS_ACCESS_TOKEN = 'ASK_COEN_FOR_THIS'
     ACCESS_TOKEN = 'pk.eyJ1IjoiY29hc3RlcjQxIiwiYSI6ImNreHpsNmw4ejdteTIydW9jdTM1eWtzbXYifQ.Osaih74nYJNxDEOiz9FK6A'
-    # d = MapDirections([[36.98365515596037,-122.00899387223498],[36.97421013125925, -122.0098521790967]])
+    # # d = MapDirections([[36.98365515596037,-122.00899387223498],[36.97421013125925, -122.0098521790967]])
     d = MapDirections([[-122.04441141616797, 36.96841340396887], [-122.01927448088864, 36.97390676208401]])
-    print(generateStreetAddressesSet(d, ACCESS_TOKEN, GMAPS_ACCESS_TOKEN))
+    # print(polyline.decode("sks`Ftx{gVSQlAaFUUcG_GQWiTgTjGkb@OSf@gBwFsf@YDyFoc@nBm@Qw@"))
+    print(detectOffCourse((36.97166, -122.03047), d, 30))
+    # print(generateStreetAddressesSet(d, ACCESS_TOKEN, GMAPS_ACCESS_TOKEN))
     # r = requests.get('https://api.mapbox.com/directions/v5/mapbox/walking/-122.00899387223498,36.98365515596037;-122.0098521790967,36.97421013125925;-122.0011521790967,36.96821013125925?access_token=pk.eyJ1IjoiY29hc3RlcjQxIiwiYSI6ImNreHpsNmw4ejdteTIydW9jdTM1eWtzbXYifQ.Osaih74nYJNxDEOiz9FK6A&steps=true')
     # # print(r.text)
     # r = r.json()
