@@ -125,15 +125,15 @@ def check_intersection(directions, avoidCoordinates, radius):
 
 def distanceCoordinates(coordinate0, coordinate1):
     # returns the distance between two coordinates in meters
-    latMid = (coordinate0[0] + coordinate1[0]) / 2.0;
+    latMid = (coordinate0[0] + coordinate1[0]) / 2.0
 
-    m_per_deg_lat = 111132.954 - 559.822 * math.cos(2.0 * latMid) + 1.175 * math.cos(4.0 * latMid);
-    m_per_deg_lon = (3.14159265359 / 180) * 6367449 * math.cos(latMid);
+    m_per_deg_lat = 111132.954 - 559.822 * math.cos(2.0 * latMid) + 1.175 * math.cos(4.0 * latMid)
+    m_per_deg_lon = (3.14159265359 / 180) * 6367449 * math.cos(latMid)
 
-    deltaLat = abs(coordinate0[0] - coordinate1[0]);
-    deltaLon = abs(coordinate0[1] - coordinate1[1]);
+    deltaLat = abs(coordinate0[0] - coordinate1[0])
+    deltaLon = abs(coordinate0[1] - coordinate1[1])
 
-    return math.sqrt(pow(deltaLat * m_per_deg_lat, 2) + pow(deltaLon * m_per_deg_lon, 2));
+    return math.sqrt(pow(deltaLat * m_per_deg_lat, 2) + pow(deltaLon * m_per_deg_lon, 2))
 
 
 def getRandomPoint(coordinate0, coordinate1):
@@ -231,8 +231,6 @@ def detectOffCourse(location, mapDirections, error):
             minDistance = distance
     print(minDistance)
     return error >= abs(minDistance)
-
-
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
