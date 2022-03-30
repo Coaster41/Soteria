@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Maps</title>
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+
+    <!-- mapbox marker -->
+    <script src="https://unpkg.com/@mapbox/mapbox-sdk/umd/mapbox-sdk.min.js"></script>
+
+    <!-- handle mapbox maps api -->
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.7.0/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.7.0/mapbox-gl.js"></script>
+    <link rel="stylesheet" href="./index.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+    <!-- handle google geocoder request -->
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+
+    <!-- places api for autocomplete feature-->
+    <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDvMgSNsv3ka4bMOxT00sXj5EKLN7AfH4o&libraries=places"></script>
+    
+    <!-- autocomplete script-->
+    <script>
+        function initialize() {
+            var input1 = document.getElementById('source');
+            var input2 = document.getElementById('destination');
+            var autocomplete = new google.maps.places.Autocomplete(input1);
+            var autocomplete2 = new google.maps.places.Autocomplete(input2);
+            google.maps.event.addListener(autocomplete, 'place_changed', function () {
+                var place = autocomplete.getPlace();
+                document.getElementById('source').value = place.name;
+            });
+            google.maps.event.addListener(autocomplete2, 'place_changed', function() {
+                var place = autocomplete2.getPlace();
+                document.getElementById('destination').value = place.name;
+            });
+        }
+        google.maps.event.addDomListener(window, 'load', initialize);
+    </script>
+
+    <script>
+        let k = true;
+        let l = true;
+        let markerone = new mapboxgl.Marker()
+        let markertwo = new mapboxgl.Marker({ color: 'green' })
+        let longitudeA = null;
+        let latitudeA = null;
+        let longitudeB = null;
+        let latitudeB = null;
+    </script>
+
+    <script>
+        let start = [longitudeA, latitudeA];
+        async function getRoute(end) {
+            // make a directions request using cycling profile
+            // an arbitrary start will always be the same
+            // only the end or destination will change
+
+            // backend function
+            const request = await fetch(
+                `http://127.0.0.1:5000/route/${start[0]}/${start[1]}/${end[0]}/${end[1]}`,
+                { method: 'GET' }
+            );
+            console.log("REQUEST" + request)
+            const points = await request.json();
+            console.log("REQUEST: " + points)
+            let link = "https://api.mapbox.com/directions/v5/mapbox/walking/"
+            for (let i = 0; i < points.length-1; i++) {
+                link = link + points[i] + "," + points[i+1]
+                if (i != points.length - 2) {
+                    link = link + ";"
+                }
+            }
+            link = link + '?steps=true&geometries=geojson&access_token=pk.eyJ1IjoiaGFyc2hleXMyMSIsImEiOiJjbDBlZWJtZG0wNmF5M2NxdHllaHNzeGhjIn0.SlizqI_E5q83Z2Jg2lktUg'
+            console.log(link)
+            const query = await fetch(link, { method: 'GET' })
+            const json = await query.json();
+            console.log(json)
+            const data = json.routes[0];
+            const route = data.geometry.coordinates;
+            const geojson = {
+                type: 'Feature',
+                properties: {},
+                geometry: {
+                    type: 'LineString',
+                    coordinates: route
+                }
+            };
+            // if the route already exists on the map, we'll reset it using setData
+            if (map.getSource('route')) {
+                map.getSource('route').setData(geojson);
+            }
+            // otherwise, we'll make a new request
+            else {
+                map.addLayer({
+                    id: 'route',
+                    type: 'line',
+                    source: {
+                        type: 'geojson',
+                        data: geojson
+                    },
+                    layout: {
+                        'line-join': 'round',
+                        'line-cap': 'round'
+                    },
+                    paint: {
+                        'line-color': '#3887be',
+                        'line-width': 5,
+                        'line-opacity': 0.75
+                    }
+                });
+            }
+            // add turn instructions here at the end
+            // get the sidebar and add the instructions
+            const instructions = document.getElementById('instructions');
+            let tripInstructions = '';
+            let l = data.legs.length
+            for(let i = 0; i < l; i++)
+            {
+                const steps = data.legs[i].steps;
+                for (const step of steps) {
+                    let k = String(step.maneuver.instruction)
+                    if(i != l-1 && !(k.includes("destination")) && !(tripInstructions.includes(k)))
+                    {
+                        tripInstructions += `<li>${step.maneuver.instruction}</li>`;
+                    }if(i == l-1 && k.includes("destination"))
+                    {
+                        tripInstructions += `<li>${step.maneuver.instruction}</li>`;
+                    }
+
+                }
+            }
+            instructions.innerHTML = `<p><strong>Trip duration: ${Math.floor(
+                    data.duration / 60
+                )} min </strong></p><ol>${tripInstructions}</ol>`;
+        }
+    </script>
+
+    <script>
+        function geoCoderA() {
+            var source = document.getElementById("source").value;
+
+            axios.get("https://maps.googleapis.com/maps/api/geocode/json", {
+                params: {
+                    address: source,
+                    key: "AIzaSyDvMgSNsv3ka4bMOxT00sXj5EKLN7AfH4o"
+                }
+            })
+                .then(function (response) {
+                    longitudeA = response.data.results[0].geometry.location.lng;
+                    latitudeA = response.data.results[0].geometry.location.lat;
+                    longitudeA = parseFloat(longitudeA);
+                    latitudeA = parseFloat(latitudeA);
+                    map.jumpTo({
+                        center: [longitudeA, latitudeA],
+                        zoom: 18
+                    });
+                    if (l == true) {
+                        markerone = new mapboxgl.Marker()
+                            .setLngLat([longitudeA, latitudeA])
+                            .addTo(map);
+                        l = false;
+                    }
+                    else {
+                        markerone.remove();
+                        markerone = new mapboxgl.Marker()
+                            .setLngLat([longitudeA, latitudeA])
+                            .addTo(map);
+                    }
+                    start = [longitudeA, latitudeA]
+                    let value = [longitudeB, latitudeB];
+                    //getRoute(value);
+                    console.log("START: ", start);
+
+                })
+                .catch(function (error) {
+                })
+        }
+    </script>
+
+    <script>
+        function geoCoderB() {
+            var destination = document.getElementById("destination").value;
+
+            axios.get("https://maps.googleapis.com/maps/api/geocode/json", {
+                params: {
+                    address: destination,
+                    key: "AIzaSyDvMgSNsv3ka4bMOxT00sXj5EKLN7AfH4o"
+                }
+            })
+                .then(function (response) {
+                    longitudeB = response.data.results[0].geometry.location.lng;
+                    latitudeB = response.data.results[0].geometry.location.lat;
+                    longitudeB = parseFloat(longitudeB);
+                    latitudeB = parseFloat(latitudeB);
+                    map.jumpTo({
+                        center: [longitudeB, latitudeB],
+                        zoom: 18
+                    });
+                    if (k == true) {
+                        markertwo = new mapboxgl.Marker({ color: 'green' })
+                            .setLngLat([longitudeB, latitudeB])
+                            .addTo(map);
+                        k = false;
+                    }
+                    else {
+                        markertwo.remove();
+                        markertwo = new mapboxgl.Marker({ color: 'green' })
+                            .setLngLat([longitudeB, latitudeB])
+                            .addTo(map);
+                    }
+                    // start = [-122.0361598231981, 36.98527481634717];
+                    start = [longitudeA, latitudeA]
+                    let value = [longitudeB, latitudeB];
+                    console.log("END",value);
+                    getRoute(value);
+
+                })
+                .catch(function (error) {
+                })
+        }
+    </script>
+
+</head>
+
+<body>
+    <div id="main">
+        <!-- main nav bar and search inputs -->
+        <div class="topnav">
+            <a href="./final.html" >Soteria</a>
+
+            <div class="search-container">
+                <input type="text" class="search" id="source" placeholder="Source" aria-label="Search" autocomplete="on" runat="server">
+                <button type="submit" onclick="geoCoderA()"><i class="fa fa-search"></i></button>
+
+                <input type="text" class="search" id="destination" placeholder="Destination" aria-label="Search" autocomplete="on" runat="server">
+                <button type="submit" onclick="geoCoderB()"><i class="fa fa-search"></i></button>
+            </div>
+        </div>
+
+        <!-- map box maps, marker, and geocoder -->
+        <div id="map"></div>
+        <div id="instructions"></div>
+
+        <script>
+            // TO MAKE THE MAP APPEAR YOU MUST
+            // ADD YOUR ACCESS TOKEN FROM
+            // https://account.mapbox.com
+            mapboxgl.accessToken = 'pk.eyJ1IjoiaGFyc2hleXMyMSIsImEiOiJjbDBlZWJtZG0wNmF5M2NxdHllaHNzeGhjIn0.SlizqI_E5q83Z2Jg2lktUg';
+            const map = new mapboxgl.Map({
+                container: 'map',
+                style: 'mapbox://styles/mapbox/streets-v11',
+                center: [-122.0551961, 37.0002987],
+                zoom: 8
+            });
+
+            // const bounds = [
+            //     [-122.069629, 37.000596],
+            //     [-121.93963889127868, 36.979353418314034]
+            // ];
+
+            //         // Add the control to the map.
+            // map.addControl(
+            //     new MapboxGeocoder({
+            //         accessToken: mapboxgl.accessToken,
+            //         mapboxgl: mapboxgl
+            //     })
+            // );
+
+            // // Add geolocate control to the map.
+            map.addControl(
+                new mapboxgl.GeolocateControl({
+                    positionOptions: {
+                        enableHighAccuracy: true
+                    },
+                    // When active the map will receive updates to the device's location as it changes.
+                    trackUserLocation: true,
+                    // Draw an arrow next to the location dot to indicate which direction the device is heading.
+                    showUserHeading: true
+                })
+            );
+
+            // Add zoom and rotation controls to the map.
+            map.addControl(new mapboxgl.NavigationControl());
+        </script>
+    </div>
+</body>
+
+</html>
