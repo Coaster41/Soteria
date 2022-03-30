@@ -20,7 +20,7 @@ def nearest_node(location):
   closest = session.run(query)
   c_dict = dict()
   for c in closest:
-    c_dict = dict(c[0])
+    c_dict = dict(c["n"])
   print("Nearest Node: ", (c_dict["x"], c_dict["y"]))
   return (c_dict["x"], c_dict["y"])
 
@@ -80,7 +80,7 @@ def test():
 
 #def path_finder(slat: float, slong: float, elat: float, elong: float):
 
-#@app.route("/route/<string:slong>/<string:slat>/<string:elong>/<string:elat>", methods = ["GET"])
+# @app.route("/route/<string:slong>/<string:slat>/<string:elong>/<string:elat>", methods = ["GET"])
 def path_finder(slong: str, slat: str, elong: str, elat: str):
   slat = float(slat)
   slong = float(slong)
@@ -120,6 +120,7 @@ def path_finder_simple(slong: str, slat: str, elong: str, elat: str):
   while True:
     seconds = time.time()
     print(max_nodes)
+    # Used code from https://liberation-data.com/saxeburg-series/2018/11/28/rock-n-roll-traffic-routing.html
     query = "MATCH paths = (a:LOCATION {x:"+str(slong)+"})-[:ROAD*1.."+str(max_nodes)+"]-(b:LOCATION {x:"+str(elong)+"}) WITH paths, relationships(paths) AS rels UNWIND rels AS rel WITH [metro IN nodes(paths) | metro.x] AS long, [metro IN nodes(paths) | metro.y] AS lat, [metro IN nodes(paths) | metro.INTERSECTION] AS intersection, sum(rel.safety_score) AS travelTime RETURN long, lat, intersection ORDER BY travelTime Limit 1"
     result = (session.run(query))  
     path = list()
